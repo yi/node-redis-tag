@@ -37,7 +37,7 @@ system. For example: book, post, person, etc.
 
 Optionally, you could create taggable object with custom redis setting:
 
-    var redisTag   = require("redis-tag", 5557, "custom.redis.host")
+    var bookTagger = new redisTag.Taggable("book", 5557, "custom.redis.host")
 
 Now we have 4 methods on the `bookTagger` object that give us tagging abilities.
 
