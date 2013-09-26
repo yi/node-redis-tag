@@ -31,6 +31,12 @@ Taggable.prototype.scopedSet = function(scope, id, tags, cb){
     var toAddCount    = added.length
     var toRemoveCount = removed.length
 
+    // nothing has been changed
+    if(toAddCount === 0 && toRemoveCount === 0){
+      cb();
+      return
+    }
+
     // add new tags
     added.forEach(function(tag){
       that.redisClient.multi()
@@ -90,6 +96,12 @@ Taggable.prototype.unscopedSet = function(id, tags, cb){
     // set counters
     var toAddCount    = added.length
     var toRemoveCount = removed.length
+
+    // nothing has been changed
+    if(toAddCount === 0 && toRemoveCount === 0){
+      cb();
+      return
+    }
 
     // add new tags
     added.forEach(function(tag){
