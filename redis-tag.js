@@ -1,8 +1,14 @@
 var redis = require("redis")
 
-var Taggable = function(taggable){
-  this.redisClient = redis.createClient()
-  this.taggable = taggable  
+/**
+ * constructor
+ * @param {String} taggable
+ * @param {uint}  [redisPort] specify custom redis port
+ * @param {String} [redisHost] specify custom redis host
+ */
+var Taggable = function(taggable, redisPort, redisHost){
+  this.redisClient = redis.createClient(redisPort, redisHost)
+  this.taggable = taggable
 }
 
 Taggable.prototype.scopedSet = function(scope, id, tags, cb){
@@ -11,15 +17,15 @@ Taggable.prototype.scopedSet = function(scope, id, tags, cb){
 
   // get current tags
   that.redisClient.smembers(scope + ":" + that.taggable + ":" + id + ":tags", function(err, reply){
-    
+
     // keep record of old list
     var oldList = reply ? reply : []
 
     // make array of tags that need to be removed
-    var added   = newList.filter(function(i){ return oldList.indexOf(i) == -1 })     
+    var added   = newList.filter(function(i){ return oldList.indexOf(i) == -1 })
 
     // make array of tags that need to be added
-    var removed = oldList.filter(function(i){ return newList.indexOf(i) == -1 })     
+    var removed = oldList.filter(function(i){ return newList.indexOf(i) == -1 })
 
     // set counters
     var toAddCount    = added.length
@@ -56,12 +62,12 @@ Taggable.prototype.scopedSet = function(scope, id, tags, cb){
           // remove tag from system if count is zero
           if(replies[5] == "0")
             that.redisClient.zrem(that.taggable + ":tags", tag)
-          
+
           toRemoveCount --
           if(toAddCount == 0 && toRemoveCount == 0) cb(true)
         })
     })
-    
+
   })
 }
 
@@ -76,10 +82,10 @@ Taggable.prototype.unscopedSet = function(id, tags, cb){
     var oldList = reply ? reply : []
 
     // make array of tags that need to be added
-    var removed = oldList.filter(function(i){ return newList.indexOf(i) == -1 })     
+    var removed = oldList.filter(function(i){ return newList.indexOf(i) == -1 })
 
     // make array of tags that need to be removed
-    var added   = newList.filter(function(i){ return oldList.indexOf(i) == -1 })     
+    var added   = newList.filter(function(i){ return oldList.indexOf(i) == -1 })
 
     // set counters
     var toAddCount    = added.length
@@ -125,7 +131,7 @@ Taggable.prototype.set = function(scope, id, tags, cb){
     // id = scope
     this.unscopedSet(scope, id, tags)
   }
-} 
+}
 
 Taggable.prototype.get = function(scope, id, cb){
   // scope
@@ -140,7 +146,7 @@ Taggable.prototype.get = function(scope, id, cb){
       id(reply)
     })
   }
-} 
+}
 
 Taggable.prototype.find = function(scope, tags, cb){
   var sets = []
@@ -148,7 +154,7 @@ Taggable.prototype.find = function(scope, tags, cb){
 
   // set list of arguments
 
-  // scope  
+  // scope
   if(cb){
     tags.forEach(function(tag){ sets.push(scope + ":" + that.taggable + ":tags:" + tag) })
   }else{
@@ -161,7 +167,7 @@ Taggable.prototype.find = function(scope, tags, cb){
   this.redisClient.sinter(sets, function(err, reply){
     cb(reply)
   })
-} 
+}
 
 Taggable.prototype.popular = function(scope, count, cb){
   // scoped
@@ -183,10 +189,10 @@ Taggable.prototype.popular = function(scope, count, cb){
 
     reply.forEach(function(item){
       if(type == "key"){
-        type = "value"        
+        type = "value"
         tag[0] = item
       }else{
-        type = "key"        
+        type = "key"
         tag[1] = parseInt(item)
         list.push(tag)
         tag = []
@@ -195,7 +201,7 @@ Taggable.prototype.popular = function(scope, count, cb){
       }
     })
   })
-} 
+}
 
 Taggable.prototype.quit = function(){
   this.redisClient.quit()

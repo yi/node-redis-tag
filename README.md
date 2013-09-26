@@ -2,7 +2,7 @@
 
 Tagging is the perfect job for redis wouldn't you agree? This library makes it
 easy to implement a tagging system into any node appication. It has only 4
-public methods and sets up all the associations for you. 
+public methods and sets up all the associations for you.
 
 ## Instalation
 
@@ -35,7 +35,12 @@ system. For example: book, post, person, etc.
     var redisTag   = require("redis-tag")
     var bookTagger = new redisTag.Taggable("book")
 
+Optionally, you could create taggable object with custom redis setting:
+
+    var redisTag   = require("redis-tag", 5557, "custom.redis.host")
+
 Now we have 4 methods on the `bookTagger` object that give us tagging abilities.
+
 
 ### set([scope,] id, tags, callback)
 
