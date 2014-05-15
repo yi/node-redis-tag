@@ -8,9 +8,7 @@
 
 redis = require "redis"
 
-
 class Taggable
-
 
   ###
   constructor
@@ -149,18 +147,11 @@ class Taggable
 
     # scope
     if cb
-      @redisClient.smembers scope + ":" + @taggable + ":" + id + ":tags", (err, reply) ->
-        cb reply
-        return
-
+      @redisClient.smembers scope + ":" + @taggable + ":" + id + ":tags", cb
     else
-
-      # cb = id
-      # id = scope
-      @redisClient.smembers @taggable + ":" + scope + ":tags", (err, reply) ->
-        id reply
-        return
-
+      #cb = id
+      #id = scope
+      @redisClient.smembers @taggable + ":" + scope + ":tags", id
     return
 
   find : (scope, tags, cb) ->
