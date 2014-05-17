@@ -163,7 +163,7 @@ class Taggable
     else
       # callback = id
       # id = scope
-      @redisClient.smembers "#{@taggable}:#{scope}:tags", callback
+      @redisClient.smembers "#{@taggable}:#{scope}:tags", id
 
     return
 
