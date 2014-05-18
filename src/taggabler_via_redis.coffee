@@ -7,6 +7,9 @@
 ##
 
 redis = require "redis"
+debuglog = require("debug")("Taggable")
+
+EMPTY_STRING = ''
 
 class Taggable
 
@@ -27,6 +30,8 @@ class Taggable
   # @param {String[]} tags
   # @param {Function} callback
   scopedSet : (scope, id, tags, callback) ->
+    debuglog "[scopedSet] scope:#{scope}, id:#{id}, tags:#{tags}"
+
     newList = tags
 
     # get current tags
@@ -94,6 +99,8 @@ class Taggable
     return
 
   unscopedSet : (id, tags, callback) ->
+    debuglog "[unscopedSet] id:#{id}, tags:#{tags}"
+
     newList = tags
 
     # get current tags
@@ -146,6 +153,8 @@ class Taggable
     return
 
   set : (scope, id, tags, callback) ->
+    debuglog "[set] scope:#{scope}, id:#{id}"
+
     if callback
       @scopedSet scope, id, tags, callback
     else
@@ -168,6 +177,7 @@ class Taggable
     return
 
   find : (scope, tags, callback) ->
+
     unless callback?
       callback = tags
       tags = scope
@@ -175,11 +185,19 @@ class Taggable
     else
       scope = "#{scope}:"
 
-    sets = []  # leave tags untouched
-    for tag, i in tags
-      sets.push "#{scope}#{@taggable}:tags:#{tag}"
+    debuglog "[find] scope:#{scope}, tags:#{tags}"
 
-    @redisClient.sinter tags, callback
+    return callback(null, []) unless (tags || EMPTY_STRING).toString()
+
+    sets = []  # leave tags untouched
+
+    if Array.isArray(tags)
+      for tag, i in tags
+        sets.push "#{scope}#{@taggable}:tags:#{tag}"
+    else
+      sets.push "#{scope}#{@taggable}:tags:#{tags}"
+
+    @redisClient.sinter sets, callback
     return
 
   #find : (scope, tags, callback) ->
@@ -222,6 +240,7 @@ class Taggable
       key = "#{@taggable}:tags"
 
     @redisClient.zrevrange key, 0, count - 1, "WITHSCORES", (err, reply) ->
+      return callback?(err) if err?
       list = []
       type = "key"
       tag = []
@@ -236,7 +255,7 @@ class Taggable
           list.push tag
           tag = []
           counter--
-        callback?(list) if counter <= 0
+        callback?(null, list) if counter <= 0
         return
 
       return

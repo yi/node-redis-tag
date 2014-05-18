@@ -29,7 +29,7 @@
   },
   "scripts": {
     "watch": "coffee -o ./lib/ -cw ./src/",
-    "test": "DEBUG=tag* ./node_modules/.bin/mocha tests"
+    "test": "DEBUG=* ./node_modules/.bin/mocha --reporter spec tests"
   },
   "devDependencies": {
     "chai": ">=1.2.0",
