@@ -11,6 +11,7 @@ debuglog = require("debug")("Taggable")
 assert = require "assert"
 
 EMPTY_STRING = ''
+EMPTY_ARRAY = []
 
 DEFAULT =
   prefix : "_T" # redis key prefix
@@ -166,25 +167,39 @@ class Taggable
     debuglog "[set] scope:#{scope}, id:#{id}"
 
     if callback
-      @scopedSet scope, id, tags, callback
+      @scopedSet scope, id, tags || EMPTY_ARRAY, callback
     else
 
       # callback = tags
       # tags = id
       # id = scope
-      @unscopedSet scope, id, tags
+      @unscopedSet scope, id || EMPTY_ARRAY, tags
     return
 
-  get : (scope, id, callback) ->
-    # scope
-    if callback
-      @redisClient.smembers "#{@prefix}:#{scope}:#{@taggable}:#{id}:tags", callback
+  get : (scope, ids, callback) ->
+
+    unless typeof callback is "function"
+      callback = ids
+      ids = scope
+      scope = ""
     else
-      # callback = id
-      # id = scope
-      @redisClient.smembers "#{@prefix}:#{@taggable}:#{scope}:tags", id
+      scope = ":#{scope}"
 
+    debuglog "[get] scope:#{scope}, ids:#{ids}"
+
+    unless ids
+      return callback?(null, [])
+
+    unless Array.isArray(ids)
+      # single id
+      @redisClient.smembers "#{@prefix}#{scope}:#{@taggable}:#{ids}:tags", callback
+    else
+      proc = @redisClient.multi()
+      for id in ids
+        proc = proc.smembers "#{@prefix}#{scope}:#{@taggable}:#{id}:tags"
+      proc.exec callback
     return
+
 
   find : (scope, tags, callback) ->
 

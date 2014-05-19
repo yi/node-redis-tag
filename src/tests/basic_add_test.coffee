@@ -149,3 +149,29 @@ describe "basic add tests", ->
       return
 
 
+    it "should clear tags on book 1", (done) ->
+      bookTagger.set 1, null, (err) ->
+        should.not.exist(err)
+        bookTagger.get 1, (err, tags) ->
+          console.log "[taggabler_via_redis_test] tags:#{tags}"
+          should.not.exist(err)
+          tags.should.be.empty
+          done()
+        return
+      return
+
+    it "should able to get multi on one go", (done) ->
+      bookTagger.get [1, 2, 3, 4], (err, results) ->
+        console.log "[taggabler_via_redis_test] results:"
+        console.dir results
+
+        results[0].should.be.empty
+        results[1].sort().should.containDeep(TAGS_JQUERY)
+        results[2].sort().should.containDeep(TAGS_RAILS)
+        results[3].sort().should.containDeep(TAGS_COFFEESCRIPT)
+
+        done()
+        return
+      return
+
+
