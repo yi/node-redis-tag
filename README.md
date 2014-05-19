@@ -7,7 +7,7 @@ Following changes have been made:
  * fix bug in set() that callback not fired when set identical tags
  * add arugments checking
 
-# redis-tag
+# taggable-via-redis
 
 Tagging is the perfect job for redis wouldn't you agree? This library makes it
 easy to implement a tagging system into any node appication. It has only 4
@@ -20,10 +20,8 @@ this, create a `package.json` file in the root of your project with the minimum
 information...
 
     {
-      "name": "yourapplication",
-      "verson": "0.0.1",
       "dependencies": {
-        "redis-tag": "0.2.0"
+        "taggable-via-redis": "latest"
       }
     }
 
@@ -33,7 +31,7 @@ Then run the following command using npm...
 
 OR, if you just want to start playing with the library run...
 
-    npm install redis-tag
+    npm install taggable-via-redis
 
 ## Test
 
@@ -45,7 +43,7 @@ To create a taggable object we must first require the library and then
 instantiate a new Taggable object. A taggable object can be any model in your
 system. For example: book, post, person, etc.
 
-    var Taggable = require("redis-tag")
+    var Taggable = require("taggable-via-redis")
     var bookTagger = new Taggable("book")
 
 Now we have 4 methods on the `bookTagger` object that give us tagging abilities.
