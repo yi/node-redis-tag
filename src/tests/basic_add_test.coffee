@@ -5,7 +5,6 @@
 ## Module dependencies
 should = require "should"
 Taggable = require "../taggabler_via_redis"
-bookTagger = new Taggable("book")
 
 # book                 tags
 # 1 - node             [javascript, server, programming]
@@ -18,15 +17,20 @@ TAGS_JQUERY = "javascript,client,programming".split(",").sort()
 TAGS_RAILS = "ruby,server,programming".split(",").sort()
 TAGS_COFFEESCRIPT = "javascript,client,server,programming".split(",").sort()
 
+REDIS_CLIENT = null
+bookTagger = null
 
 ## Test cases
 describe "basic add tests", ->
 
   before (done) ->
     redis = require("redis")
-    client = redis.createClient()
-    client.flushall()
-    client.quit()
+    REDIS_CLIENT = redis.createClient()
+    REDIS_CLIENT.flushall()
+    bookTagger = new Taggable
+      taggable : "book"
+      redisClient : REDIS_CLIENT
+
     setTimeout done, 1800 # wait to prevent flushall() happens during test execusion
     #done()
 

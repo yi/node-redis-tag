@@ -5,10 +5,12 @@
 ## Module dependencies
 should = require "should"
 Taggable = require "../taggabler_via_redis"
-bookTagger = new Taggable("person")
 
-USER_27 = "user:27"
-USER_42 = "user:42"
+REDIS_CLIENT = null
+bookTagger = null
+
+USER_27 = "user/27"
+USER_42 = "user/42"
 
 TAGS_NODE = "javascript,server,programming".split(",").sort()
 TAGS_JQUERY = "javascript,client,programming".split(",").sort()
@@ -22,9 +24,11 @@ describe "scope add tests", ->
 
   before (done) ->
     redis = require("redis")
-    client = redis.createClient()
-    client.flushall()
-    client.quit()
+    REDIS_CLIENT = redis.createClient()
+    REDIS_CLIENT.flushall()
+    bookTagger = new Taggable
+      taggable : "book"
+      redisClient : REDIS_CLIENT
     setTimeout done, 1800 # wait to prevent flushall() happens during test execusion
     #done()
 

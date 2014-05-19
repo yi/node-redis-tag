@@ -5,16 +5,21 @@
 ## Module dependencies
 should = require "should"
 Taggable = require "../taggabler_via_redis"
-personTagger = new Taggable("person")
+
+REDIS_CLIENT = null
+personTagger   = null
 
 ## Test cases
 describe "basic update tests", ->
 
   before (done) ->
     redis = require("redis")
-    client = redis.createClient()
-    client.flushall()
-    client.quit()
+    REDIS_CLIENT = redis.createClient()
+    REDIS_CLIENT.flushall()
+    personTagger = new Taggable
+      taggable : "person"
+      redisClient : REDIS_CLIENT
+
     setTimeout done, 1800 # wait to prevent flushall() happens during test execusion
     #done()
 

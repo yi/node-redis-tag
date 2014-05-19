@@ -8,8 +8,12 @@
 
 redis = require "redis"
 debuglog = require("debug")("Taggable")
+assert = require "assert"
 
 EMPTY_STRING = ''
+
+DEFAULT =
+  prefix : "_T" # redis key prefix
 
 class Taggable
 
@@ -20,9 +24,15 @@ class Taggable
   @param {uint}  [redisPort] specify custom redis port
   @param {String} [redisHost] specify custom redis host
   ###
-  constructor : (taggable, redisPort, redisHost) ->
-    @redisClient = redis.createClient(redisPort, redisHost)
-    @taggable = taggable
+  constructor : (options) ->
+    assert options, "missing options"
+    assert options.taggable, "missing taggable in options"
+    if options.redisClient
+      @redisClient = options.redisClient
+    else
+      @redisClient = redis.createClient(redisPort, redisHost)
+    @taggable = options.taggable
+    @prefix = options.prefix || DEFAULT.prefix
     return
 
   # @param {String} scope
@@ -35,7 +45,7 @@ class Taggable
     newList = tags
 
     # get current tags
-    @redisClient.smembers "#{scope}:#{@taggable}:#{id}:tags", (err, oldList) =>
+    @redisClient.smembers "#{@prefix}:#{scope}:#{@taggable}:#{id}:tags", (err, oldList) =>
       return callback?(err) if err?
 
       # keep record of old list
@@ -57,12 +67,12 @@ class Taggable
       # add new tags
       added.forEach (tag) =>
         @redisClient.multi()
-        .sadd("#{scope}:#{@taggable}:#{id}:tags", tag)
-        .sadd("#{scope}:#{@taggable}:tags:#{tag}", id)
-        .zincrby("#{scope}:#{@taggable}:tags", 1, tag)
-        .sadd("#{@taggable}:#{id}:tags", tag)
-        .sadd("#{@taggable}:tags:#{tag}", id)
-        .zincrby("#{@taggable}:tags", 1, tag)
+        .sadd("#{@prefix}:#{scope}:#{@taggable}:#{id}:tags", tag)
+        .sadd("#{@prefix}:#{scope}:#{@taggable}:tags:#{tag}", id)
+        .zincrby("#{@prefix}:#{scope}:#{@taggable}:tags", 1, tag)
+        .sadd("#{@prefix}:#{@taggable}:#{id}:tags", tag)
+        .sadd("#{@prefix}:#{@taggable}:tags:#{tag}", id)
+        .zincrby("#{@prefix}:#{@taggable}:tags", 1, tag)
         .exec (err, replies) ->
           return callback?(err) if err?
           toAddCount--
@@ -73,19 +83,19 @@ class Taggable
       # remove the rest
       removed.forEach (tag) =>
         @redisClient.multi()
-        .srem("#{scope}:#{@taggable}:#{id}:tags", tag)
-        .srem("#{scope}:#{@taggable}:tags:#{tag}", id)
-        .zincrby("#{scope}:#{@taggable}:tags", -1, tag)
-        .srem("#{@taggable}:#{id}:tags", tag)
-        .srem("#{@taggable}:tags:#{tag}", id)
-        .zincrby("#{@taggable}:tags", -1, tag)
+        .srem("#{@prefix}:#{scope}:#{@taggable}:#{id}:tags", tag)
+        .srem("#{@prefix}:#{scope}:#{@taggable}:tags:#{tag}", id)
+        .zincrby("#{@prefix}:#{scope}:#{@taggable}:tags", -1, tag)
+        .srem("#{@prefix}:#{@taggable}:#{id}:tags", tag)
+        .srem("#{@prefix}:#{@taggable}:tags:#{tag}", id)
+        .zincrby("#{@prefix}:#{@taggable}:tags", -1, tag)
         .exec (err, replies) =>
           return callback?(err) if err?
 
-          @redisClient.zrem("#{scope}:#{@taggable}:tags", tag) if replies[2] is "0"
+          @redisClient.zrem("#{@prefix}:#{scope}:#{@taggable}:tags", tag) if replies[2] is "0"
 
           # remove tag from system if count is zero
-          @redisClient.zrem("#{@taggable}:tags", tag) if replies[5] is "0"
+          @redisClient.zrem("#{@prefix}:#{@taggable}:tags", tag) if replies[5] is "0"
 
           toRemoveCount--
 
@@ -104,7 +114,7 @@ class Taggable
     newList = tags
 
     # get current tags
-    @redisClient.smembers "#{@taggable}:#{id}:tags", (err, oldList) =>
+    @redisClient.smembers "#{@prefix}:#{@taggable}:#{id}:tags", (err, oldList) =>
 
       # keep record of old list
       oldList = oldList || []
@@ -125,9 +135,9 @@ class Taggable
       # add new tags
       added.forEach (tag) =>
         @redisClient.multi()
-        .sadd("#{@taggable}:#{id}:tags", tag)
-        .sadd("#{@taggable}:tags:#{tag}", id)
-        .zincrby("#{@taggable}:tags", 1, tag)
+        .sadd("#{@prefix}:#{@taggable}:#{id}:tags", tag)
+        .sadd("#{@prefix}:#{@taggable}:tags:#{tag}", id)
+        .zincrby("#{@prefix}:#{@taggable}:tags", 1, tag)
         .exec (err, replies) =>
           return callback?(err) if err?
 
@@ -139,12 +149,12 @@ class Taggable
       # remove the rest
       removed.forEach (tag) =>
         @redisClient.multi()
-        .srem("#{@taggable}:#{id}:tags", tag)
-        .srem("#{@taggable}:tags:#{tag}", id)
-        .zincrby("#{@taggable}:tags", -1, tag)
+        .srem("#{@prefix}:#{@taggable}:#{id}:tags", tag)
+        .srem("#{@prefix}:#{@taggable}:tags:#{tag}", id)
+        .zincrby("#{@prefix}:#{@taggable}:tags", -1, tag)
         .exec (err, replies) =>
           # remove tag from system if count is zero
-          @redisClient.zrem("#{@taggable}:tags", tag) if replies[2] is "0"
+          @redisClient.zrem("#{@prefix}:#{@taggable}:tags", tag) if replies[2] is "0"
           toRemoveCount--
           callback?() if toAddCount is 0 and toRemoveCount is 0
           return
@@ -168,11 +178,11 @@ class Taggable
   get : (scope, id, callback) ->
     # scope
     if callback
-      @redisClient.smembers "#{scope}:#{@taggable}:#{id}:tags", callback
+      @redisClient.smembers "#{@prefix}:#{scope}:#{@taggable}:#{id}:tags", callback
     else
       # callback = id
       # id = scope
-      @redisClient.smembers "#{@taggable}:#{scope}:tags", id
+      @redisClient.smembers "#{@prefix}:#{@taggable}:#{scope}:tags", id
 
     return
 
@@ -193,51 +203,24 @@ class Taggable
 
     if Array.isArray(tags)
       for tag, i in tags
-        sets.push "#{scope}#{@taggable}:tags:#{tag}"
+        sets.push "#{@prefix}:#{scope}#{@taggable}:tags:#{tag}"
     else
-      sets.push "#{scope}#{@taggable}:tags:#{tags}"
+      sets.push "#{@prefix}:#{scope}#{@taggable}:tags:#{tags}"
 
     @redisClient.sinter sets, callback
     return
-
-  #find : (scope, tags, callback) ->
-    #sets = []
-    #that = this
-
-    ## set list of arguments
-
-    ## scope
-    #if callback
-      #tags.forEach (tag) ->
-        #sets.push scope + ":" + that.taggable + ":tags:" + tag
-        #return
-
-    #else
-
-      ## cb = tags
-      ## tags = scope
-      #scope.forEach (tag) ->
-        #sets.push that.taggable + ":tags:" + tag
-        #return
-
-      #cb = tags
-    #@redisClient.sinter sets, (err, reply) ->
-      #cb reply
-      #return
-
-    #return
 
   popular : (scope, count, callback) ->
 
     # scoped
     if callback
-      key = "#{scope}:#{@taggable}:tags"
+      key = "#{@prefix}:#{scope}:#{@taggable}:tags"
 
     # unscoped
     else
       callback = count
       count = scope
-      key = "#{@taggable}:tags"
+      key = "#{@prefix}:#{@taggable}:tags"
 
     @redisClient.zrevrange key, 0, count - 1, "WITHSCORES", (err, reply) ->
       return callback?(err) if err?
