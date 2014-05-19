@@ -44,9 +44,19 @@ instantiate a new Taggable object. A taggable object can be any model in your
 system. For example: book, post, person, etc.
 
     var Taggable = require("taggable-via-redis")
-    var bookTagger = new Taggable("book")
+    var options = {taggable:"book"};
+    var bookTagger = new Taggable(options)
 
 Now we have 4 methods on the `bookTagger` object that give us tagging abilities.
+
+### init options
+
+ * taggable -- name of taggable object
+ * prefix  -- [optional] redis key prefix
+ * redisClient  -- [optional] use existing redis client, when override redisPort and redisHost options
+ * redisPort -- [optional] custom redis port
+ * redisHost -- [optional] custom redis host
+
 
 ### set([scope,] id, tags, callback)
 

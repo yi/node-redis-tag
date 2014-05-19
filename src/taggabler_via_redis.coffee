@@ -30,7 +30,7 @@ class Taggable
     if options.redisClient
       @redisClient = options.redisClient
     else
-      @redisClient = redis.createClient(redisPort, redisHost)
+      @redisClient = redis.createClient(options.redisPort, options.redisHost)
     @taggable = options.taggable
     @prefix = options.prefix || DEFAULT.prefix
     return
