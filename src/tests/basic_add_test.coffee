@@ -36,6 +36,15 @@ describe "basic add tests", ->
 
   describe "taggabler_via_redis", ->
 
+    it "popular should work when no any tag", (done) ->
+      bookTagger.popular 10, (err, rsp) ->
+        should.not.exist(err)
+        rsp.should.be.empty
+        done()
+        return
+      return
+
+
     it "should set tags on book 1", (done) ->
       bookTagger.set 1, TAGS_NODE, (err) ->
         should.not.exist(err)

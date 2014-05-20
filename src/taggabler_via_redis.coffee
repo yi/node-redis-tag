@@ -245,22 +245,13 @@ class Taggable
 
     @redisClient.zrevrange key, 0, count - 1, "WITHSCORES", (err, reply) ->
       return callback?(err) if err?
-      list = []
-      type = "key"
-      tag = []
-      counter = reply.length / 2
-      reply.forEach (item) ->
-        if type is "key"
-          type = "value"
-          tag[0] = item
-        else
-          type = "key"
-          tag[1] = parseInt(item)
-          list.push tag
-          tag = []
-          counter--
-        callback?(null, list) if counter <= 0
-        return
+
+      results = []
+      for item, i in reply by 2
+        results.push([reply[i], parseInt(reply[i+1], 10)])
+
+      callback?(null, results)
+      return
 
       return
 
