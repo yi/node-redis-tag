@@ -185,7 +185,7 @@ class Taggable
       callback = scope
       scope = ""
     else
-      scope = ":#{scope}"
+      scope = if scope? then "#{scope}:" else EMPTY_STRING
 
     debuglog "[get] ids:#{ids}, scope:#{scope}"
 
@@ -194,11 +194,11 @@ class Taggable
 
     unless Array.isArray(ids) and ids.length > 0
       # single id
-      @redisClient.smembers "#{@prefix}#{scope}:#{@taggable}:#{ids}:tags", callback
+      @redisClient.smembers "#{@prefix}:#{scope}#{@taggable}:#{ids}:tags", callback
     else
       proc = @redisClient.multi()
       for id in ids
-        proc = proc.smembers "#{@prefix}#{scope}:#{@taggable}:#{id}:tags"
+        proc = proc.smembers "#{@prefix}:#{scope}#{@taggable}:#{id}:tags"
       proc.exec callback
     return
 
@@ -209,7 +209,7 @@ class Taggable
       callback = scope
       scope = EMPTY_STRING
     else
-      scope = "#{scope}:"
+      scope = if scope? then  "#{scope}:" else EMPTY_STRING
 
     debuglog "[find] tags:#{tags}, scope:#{scope}"
 
@@ -232,7 +232,7 @@ class Taggable
       callback = scope
       scope = EMPTY_STRING
     else
-      scope = "#{scope}:"
+      scope = if scope? then  "#{scope}:" else EMPTY_STRING
 
     debuglog "[popular] count:#{count}, scope:#{scope}"
 
