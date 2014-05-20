@@ -35,14 +35,14 @@ describe "scope add tests", ->
   describe "taggabler_via_redis", ->
 
     it "should set tags on book 1", (done) ->
-      bookTagger.set USER_27, 1, TAGS_NODE, (err) ->
+      bookTagger.set 1, TAGS_NODE,USER_27,  (err) ->
         should.not.exist(err)
         done()
         return
       return
 
     it "should get tags for book 1", (done) ->
-      bookTagger.get USER_27, 1, (err, rsp) ->
+      bookTagger.get 1,USER_27,  (err, rsp) ->
         should.not.exist(err)
         rsp.sort().should.containDeep TAGS_NODE
         done()
@@ -50,7 +50,7 @@ describe "scope add tests", ->
       return
 
     it "should set tags on book 2", (done) ->
-      bookTagger.set USER_27, 2, TAGS_JQUERY, (err) ->
+      bookTagger.set 2, TAGS_JQUERY,USER_27,  (err) ->
         should.not.exist(err)
         done()
         return
@@ -58,7 +58,7 @@ describe "scope add tests", ->
       return
 
     it "should get tags for book 2", (done) ->
-      bookTagger.get USER_27, 2, (err, rsp) ->
+      bookTagger.get 2,USER_27,  (err, rsp) ->
         should.not.exist(err)
         rsp.sort().should.containDeep TAGS_JQUERY
         done()
@@ -66,14 +66,14 @@ describe "scope add tests", ->
       return
 
     it "should set tags on book 3", (done) ->
-      bookTagger.set USER_42, 3, TAGS_RAILS, (err) ->
+      bookTagger.set 3, TAGS_RAILS,USER_42,  (err) ->
         should.not.exist(err)
         done()
         return
       return
 
     it "should get tags for book 3", (done) ->
-      bookTagger.get USER_42, 3, (err, rsp) ->
+      bookTagger.get 3,USER_42,  (err, rsp) ->
         should.not.exist(err)
         rsp.sort().should.containDeep TAGS_RAILS
         done()
@@ -81,14 +81,14 @@ describe "scope add tests", ->
       return
 
     it "should set tags on book 4", (done) ->
-      bookTagger.set USER_42, 4, TAGS_COFFEESCRIPT, (err) ->
+      bookTagger.set 4, TAGS_COFFEESCRIPT,USER_42,  (err) ->
         should.not.exist(err)
         done()
         return
       return
 
     it "should get tags for book 4", (done) ->
-      bookTagger.get USER_42, 4, (err, rsp) ->
+      bookTagger.get 4,USER_42,  (err, rsp) ->
         should.not.exist(err)
         rsp.sort().should.containDeep TAGS_COFFEESCRIPT
         done()
@@ -96,7 +96,7 @@ describe "scope add tests", ->
       return
 
     it "should get empty array if book has not been tagged", (done) ->
-      bookTagger.get USER_42, 99, (err, rsp) ->
+      bookTagger.get 99,USER_42,  (err, rsp) ->
         should.not.exist(err)
         rsp.should.be.empty
         done()
@@ -104,7 +104,7 @@ describe "scope add tests", ->
       return
 
     it "should find books from tag", (done) ->
-      bookTagger.find USER_42, "client", (err, rsp) ->
+      bookTagger.find "client",USER_42,  (err, rsp) ->
         should.not.exist(err)
         rsp.should.containDeep(["4"])
         done()
@@ -112,7 +112,7 @@ describe "scope add tests", ->
       return
 
     it "should get empty array for non existing tag", (done) ->
-      bookTagger.find USER_42, "maytag", (err, rsp) ->
+      bookTagger.find "maytag",USER_42,  (err, rsp) ->
         should.not.exist(err)
         rsp.should.be.empty
         done()
@@ -120,7 +120,7 @@ describe "scope add tests", ->
       return
 
     it "should get all items if no tags specified", (done) ->
-      bookTagger.find USER_42, [], (err, rsp) ->
+      bookTagger.find [], USER_42, (err, rsp) ->
         should.not.exist(err)
         rsp.should.be.empty
         done()
@@ -128,7 +128,7 @@ describe "scope add tests", ->
       return
 
     it "should get most popular tags from user 42", (done) ->
-      bookTagger.popular USER_42, 10, (err, rsp) ->
+      bookTagger.popular 10, USER_42, (err, rsp) ->
         should.not.exist(err)
         rsp[0].should.containDeep([
           "programming"

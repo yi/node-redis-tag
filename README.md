@@ -58,7 +58,7 @@ Now we have 4 methods on the `bookTagger` object that give us tagging abilities.
  * redisHost -- [optional] custom redis host
 
 
-### set([scope,] id, tags, callback)
+### set(id, tags, [scope,]  callback)
 
 The `set` method applies tags to an `id` (which is your first argument). The id
 should correspond with the resource you are tagging. The id does not have to be
@@ -78,11 +78,11 @@ have avaiable to you all the other methods in a non-scoped or scoped manner.
 #### OR (with scope)
 
     // sets tags on book 12 for user 42
-    bookTagger.set("user:42", 12, ["fiction", "fantasy"], function(response){
+    bookTagger.set(12, ["fiction", "fantasy"], "user:42", function(response){
       console.log(response) //=> true
     })
 
-### get([scope,] id, callback)
+### get(id, [scope,] callback)
 
 The `get` method simply takes an `id` and a callback with a list of tags as the
 response. This will always be in the form of an array.
@@ -98,7 +98,7 @@ Please note that this is only effective if you have used a scope on the `set`
 method.
 
     // gets tags for book 12
-    bookTagger.get("user:42", 12, function(tags){
+    bookTagger.get(12, "user:42", function(tags){
       console.log(tags) //=> ["fiction", "fantasy"]
     })
 
@@ -119,7 +119,7 @@ Please note that this is only effective if you have used a scope on the `set`
 method.
 
     // finds resources that have been tagged "fiction"
-    bookTagger.find("user:42", ["fiction"], function(ids){
+    bookTagger.find(["fiction"], "user:42", function(ids){
       console.log(ids) //=> ["12", "27", "42", "18"]
     })
 
@@ -139,7 +139,7 @@ a `nested array` listing the tags in decending order.
 Please note that this is only effective if you have used a scope on the `set`
 method.
 
-    bookTagger.popular("user:42", 25, function(tags){
+    bookTagger.popular(25, "user:42", function(tags){
       console.log(tags) //=> [ ["fiction", 27], ["non-fiction", 23], ["fantasy", 15], ... ]
     })
 

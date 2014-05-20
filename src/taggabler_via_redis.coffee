@@ -163,34 +163,36 @@ class Taggable
       return
     return
 
-  set : (scope, id, tags, callback) ->
-    debuglog "[set] scope:#{scope}, id:#{id}"
+  set : (id, tags, scope, callback) ->
 
-    if callback
-      @scopedSet scope, id, tags || EMPTY_ARRAY, callback
+    if 'function' is typeof scope
+      callback = scope
+      scope = null
+
+    tags = tags || EMPTY_ARRAY
+
+    debuglog "[set] id:#{id}, tags:#{tags}, scope:#{scope},"
+
+    if scope
+      @scopedSet scope, id, tags, callback
     else
-
-      # callback = tags
-      # tags = id
-      # id = scope
-      @unscopedSet scope, id || EMPTY_ARRAY, tags
+      @unscopedSet id, tags, callback
     return
 
-  get : (scope, ids, callback) ->
+  get : (ids, scope, callback) ->
 
-    unless typeof callback is "function"
-      callback = ids
-      ids = scope
+    if 'function' is typeof scope
+      callback = scope
       scope = ""
     else
       scope = ":#{scope}"
 
-    debuglog "[get] scope:#{scope}, ids:#{ids}"
+    debuglog "[get] ids:#{ids}, scope:#{scope}"
 
     unless ids
       return callback?(null, [])
 
-    unless Array.isArray(ids)
+    unless Array.isArray(ids) and ids.length > 0
       # single id
       @redisClient.smembers "#{@prefix}#{scope}:#{@taggable}:#{ids}:tags", callback
     else
@@ -201,16 +203,15 @@ class Taggable
     return
 
 
-  find : (scope, tags, callback) ->
+  find : (tags, scope, callback) ->
 
-    unless callback?
-      callback = tags
-      tags = scope
-      scope = ""
+    if 'function' is typeof scope
+      callback = scope
+      scope = EMPTY_STRING
     else
       scope = "#{scope}:"
 
-    debuglog "[find] scope:#{scope}, tags:#{tags}"
+    debuglog "[find] tags:#{tags}, scope:#{scope}"
 
     return callback(null, []) unless (tags || EMPTY_STRING).toString()
 
@@ -225,17 +226,17 @@ class Taggable
     @redisClient.sinter sets, callback
     return
 
-  popular : (scope, count, callback) ->
+  popular : (count, scope, callback) ->
 
-    # scoped
-    if callback
-      key = "#{@prefix}:#{scope}:#{@taggable}:tags"
-
-    # unscoped
+    if 'function' is typeof scope
+      callback = scope
+      scope = EMPTY_STRING
     else
-      callback = count
-      count = scope
-      key = "#{@prefix}:#{@taggable}:tags"
+      scope = "#{scope}:"
+
+    debuglog "[popular] count:#{count}, scope:#{scope}"
+
+    key = "#{@prefix}:#{scope}#{@taggable}:tags"
 
     @redisClient.zrevrange key, 0, count - 1, "WITHSCORES", (err, reply) ->
       return callback?(err) if err?
@@ -259,8 +260,6 @@ class Taggable
       return
 
     return
-
-  @quit = -> @redisClient.quit()
 
 module.exports = Taggable
 
