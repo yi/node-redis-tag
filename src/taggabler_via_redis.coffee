@@ -165,6 +165,9 @@ class Taggable
 
   set : (id, tags, scope, callback) ->
 
+    id = String(id || EMPTY_STRING)
+    assert id, "bad argument id:#{id})
+
     if 'function' is typeof scope
       callback = scope
       scope = null
@@ -202,7 +205,6 @@ class Taggable
       proc.exec callback
     return
 
-
   find : (tags, scope, callback) ->
 
     if 'function' is typeof scope
@@ -227,6 +229,9 @@ class Taggable
     return
 
   popular : (count, scope, callback) ->
+
+    count = parseInt count, 10
+    assert count > 0, "bad argument count:#{count}"
 
     if 'function' is typeof scope
       callback = scope

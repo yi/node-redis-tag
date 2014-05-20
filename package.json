@@ -1,7 +1,7 @@
 {
   "name": "taggable-via-redis",
   "description": "Add tagging functionality backed by Redis. This is a rewrite of sintaxi's node-redis-tag.",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "homepage": "https://github.com/yi/node-taggable-via-redis",
   "author": "Brock Whitten <brock@sintaxi.com>",
   "contributors": ["Yi <yi2004@gmail.com>"],
