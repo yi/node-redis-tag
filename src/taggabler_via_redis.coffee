@@ -166,7 +166,7 @@ class Taggable
   set : (id, tags, scope, callback) ->
 
     id = String(id || EMPTY_STRING)
-    assert id, "bad argument id:#{id})
+    assert id, "bad argument id:#{id})"
 
     if 'function' is typeof scope
       callback = scope
