@@ -41,7 +41,7 @@ class Taggable
   # @param {String[]} tags
   # @param {Function} callback
   scopedSet : (scope, id, tags, callback) ->
-    debuglog "[scopedSet] scope:#{scope}, id:#{id}, tags:#{tags}"
+    debuglog "[scopedSet] taggable:#{@taggable}, scope:#{scope}, id:#{id}, tags:#{tags}"
 
     newList = tags
 
@@ -110,7 +110,7 @@ class Taggable
     return
 
   unscopedSet : (id, tags, callback) ->
-    debuglog "[unscopedSet] id:#{id}, tags:#{tags}"
+    debuglog "[unscopedSet] taggable:#{@taggable}, id:#{id}, tags:#{tags}"
 
     newList = tags
 
@@ -174,7 +174,7 @@ class Taggable
 
     tags = tags || EMPTY_ARRAY
 
-    debuglog "[set] id:#{id}, tags:#{tags}, scope:#{scope},"
+    debuglog "[set] taggable:#{@taggable}, id:#{id}, tags:#{tags}, scope:#{scope},"
 
     if scope
       @scopedSet scope, id, tags, callback
@@ -190,7 +190,7 @@ class Taggable
     else
       scope = if scope? then "#{scope}:" else EMPTY_STRING
 
-    debuglog "[get] ids:#{ids}, scope:#{scope}"
+    debuglog "[get] taggable:#{@taggable}, ids:#{ids}, scope:#{scope}"
 
     unless ids
       return callback?(null, [])
@@ -213,7 +213,7 @@ class Taggable
     else
       scope = if scope? then  "#{scope}:" else EMPTY_STRING
 
-    debuglog "[find] tags:#{tags}, scope:#{scope}"
+    debuglog "[find] taggable:#{@taggable}, tags:#{tags}, scope:#{scope}"
 
     return callback(null, []) unless (tags || EMPTY_STRING).toString()
 
@@ -239,7 +239,7 @@ class Taggable
     else
       scope = if scope? then  "#{scope}:" else EMPTY_STRING
 
-    debuglog "[popular] count:#{count}, scope:#{scope}"
+    debuglog "[popular]  taggable:#{@taggable}, count:#{count}, scope:#{scope}"
 
     key = "#{@prefix}:#{scope}#{@taggable}:tags"
 
