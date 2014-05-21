@@ -4,7 +4,7 @@
 
 ## Module dependencies
 should = require "should"
-Taggable = require "../taggabler_via_redis"
+taggable = require "../taggabler_via_redis"
 
 # book                 tags
 # 1 - node             [javascript, server, programming]
@@ -18,7 +18,8 @@ TAGS_RAILS = "ruby,server,programming".split(",").sort()
 TAGS_COFFEESCRIPT = "javascript,client,server,programming".split(",").sort()
 
 REDIS_CLIENT = null
-bookTagger = null
+
+MODULE_NAME = "book"
 
 ## Test cases
 describe "basic add tests", ->
@@ -27,9 +28,7 @@ describe "basic add tests", ->
     redis = require("redis")
     REDIS_CLIENT = redis.createClient()
     REDIS_CLIENT.flushall()
-    bookTagger = new Taggable
-      taggable : "book"
-      redisClient : REDIS_CLIENT
+    taggable.init(REDIS_CLIENT)
 
     setTimeout done, 1800 # wait to prevent flushall() happens during test execusion
     #done()
@@ -37,7 +36,7 @@ describe "basic add tests", ->
   describe "taggabler_via_redis", ->
 
     it "popular should work when no any tag", (done) ->
-      bookTagger.popular 10, (err, rsp) ->
+      taggable.popular MODULE_NAME, 10, (err, rsp) ->
         should.not.exist(err)
         rsp.should.be.empty
         done()
@@ -46,14 +45,14 @@ describe "basic add tests", ->
 
 
     it "should set tags on book 1", (done) ->
-      bookTagger.set 1, TAGS_NODE, (err) ->
+      taggable.set MODULE_NAME, 1, TAGS_NODE, (err) ->
         should.not.exist(err)
         done()
         return
       return
 
     it "should get tags for book 1", (done) ->
-      bookTagger.get 1, (err, tags) ->
+      taggable.get MODULE_NAME, 1, (err, tags) ->
         console.log "[taggabler_via_redis_test] tags:#{tags}"
 
         should.not.exist(err)
@@ -63,14 +62,14 @@ describe "basic add tests", ->
       return
 
     it "should set tags on book 2", (done) ->
-      bookTagger.set 2, TAGS_JQUERY, (err) ->
+      taggable.set MODULE_NAME, 2, TAGS_JQUERY, (err) ->
         should.not.exist(err)
         done()
         return
       return
 
     it "should get tags for book 2", (done) ->
-      bookTagger.get 2, (err, tags) ->
+      taggable.get MODULE_NAME, 2, (err, tags) ->
         console.log "[taggabler_via_redis_test] tags:#{tags}"
         should.not.exist(err)
         tags.sort().should.containDeep(TAGS_JQUERY)
@@ -79,14 +78,14 @@ describe "basic add tests", ->
       return
 
     it "should set tags on book 3", (done) ->
-      bookTagger.set 3, TAGS_RAILS, (err) ->
+      taggable.set MODULE_NAME, 3, TAGS_RAILS, (err) ->
         should.not.exist(err)
         done()
         return
       return
 
     it "should get tags for book 3", (done) ->
-      bookTagger.get 3, (err, tags) ->
+      taggable.get MODULE_NAME, 3, (err, tags) ->
         console.log "[taggabler_via_redis_test] tags:#{tags}"
         should.not.exist(err)
         tags.sort().should.containDeep(TAGS_RAILS)
@@ -95,14 +94,14 @@ describe "basic add tests", ->
       return
 
     it "should set tags on book 4", (done) ->
-      bookTagger.set 4, TAGS_COFFEESCRIPT, (err)->
+      taggable.set MODULE_NAME, 4, TAGS_COFFEESCRIPT, (err)->
         should.not.exist(err)
         done()
         return
       return
 
     it "should get tags for book 4", (done) ->
-      bookTagger.get 4, (err, tags) ->
+      taggable.get MODULE_NAME, 4, (err, tags) ->
         console.log "[taggabler_via_redis_test] tags:#{tags}"
         should.not.exist(err)
         tags.sort().should.containDeep(TAGS_COFFEESCRIPT)
@@ -111,7 +110,7 @@ describe "basic add tests", ->
       return
 
     it "should get empty array if book has not been tagged", (done) ->
-      bookTagger.get 99, (err, tags) ->
+      taggable.get MODULE_NAME, 99, (err, tags) ->
         should.not.exist(err)
         Array.isArray(tags).should.be.ok
         tags.should.be.empty
@@ -120,7 +119,7 @@ describe "basic add tests", ->
       return
 
     it "should find books from tag", (done) ->
-      bookTagger.find "client", (err, rsp) ->
+      taggable.find MODULE_NAME, "client", (err, rsp) ->
         should.not.exist(err)
         rsp.sort().should.containDeep(["2","4"])
         done()
@@ -128,7 +127,7 @@ describe "basic add tests", ->
       return
 
     it "should get empty array for non existing tag", (done) ->
-      bookTagger.find "maytag", (err, rsp) ->
+      taggable.find MODULE_NAME, "maytag", (err, rsp) ->
         should.not.exist(err)
         Array.isArray(rsp).should.be.ok
         rsp.should.be.empty
@@ -137,7 +136,7 @@ describe "basic add tests", ->
       return
 
     it "should get all items if no tags specified", (done) ->
-      bookTagger.find [], (err, rsp) ->
+      taggable.find MODULE_NAME, [], (err, rsp) ->
         console.log "[taggabler_via_redis_test] rsp:#{rsp}"
         should.not.exist(err)
         Array.isArray(rsp).should.be.ok
@@ -147,7 +146,7 @@ describe "basic add tests", ->
       return
 
     it "should get most popular tags", (done) ->
-      bookTagger.popular 10, (err, rsp) ->
+      taggable.popular MODULE_NAME, 10, (err, rsp) ->
         console.log "[taggabler_via_redis_test] rsp:"
         console.dir rsp
         should.not.exist(err)
@@ -159,9 +158,9 @@ describe "basic add tests", ->
 
 
     it "should clear tags on book 1", (done) ->
-      bookTagger.set 1, null, (err) ->
+      taggable.set MODULE_NAME, 1, null, (err) ->
         should.not.exist(err)
-        bookTagger.get 1, (err, tags) ->
+        taggable.get MODULE_NAME, 1, (err, tags) ->
           console.log "[taggabler_via_redis_test] tags:#{tags}"
           should.not.exist(err)
           tags.should.be.empty
@@ -170,7 +169,7 @@ describe "basic add tests", ->
       return
 
     it "should able to get multi on one go", (done) ->
-      bookTagger.get [1, 2, 3, 4], (err, results) ->
+      taggable.get MODULE_NAME, [1, 2, 3, 4], (err, results) ->
         console.log "[taggabler_via_redis_test] results:"
         console.dir results
 

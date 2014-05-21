@@ -13,251 +13,245 @@ assert = require "assert"
 EMPTY_STRING = ''
 EMPTY_ARRAY = []
 
-DEFAULT =
-  prefix : "_T" # redis key prefix
+PREFIX = "_T" # redis key prefix
 
-class Taggable
+REDIS_CLIENT = null
 
+# @param {String} scope
+# @param {String} id
+# @param {String[]} tags
+# @param {Function} callback
+scopedSet = (type, scope, id, tags, callback) ->
+  debuglog "[scopedSet] type:#{type}, scope:#{scope}, id:#{id}, tags:#{tags}"
 
-  ###
-  constructor
-  @param {String} taggable
-  @param {uint}  [redisPort] specify custom redis port
-  @param {String} [redisHost] specify custom redis host
-  ###
-  constructor : (options) ->
-    assert options, "missing options"
-    assert options.taggable, "missing taggable in options"
-    if options.redisClient
-      @redisClient = options.redisClient
-    else
-      @redisClient = redis.createClient(options.redisPort, options.redisHost)
-    @taggable = options.taggable
-    @prefix = options.prefix || DEFAULT.prefix
-    return
+  newList = tags
 
-  # @param {String} scope
-  # @param {String} id
-  # @param {String[]} tags
-  # @param {Function} callback
-  scopedSet : (scope, id, tags, callback) ->
-    debuglog "[scopedSet] taggable:#{@taggable}, scope:#{scope}, id:#{id}, tags:#{tags}"
+  # get current tags
+  REDIS_CLIENT.smembers "#{PREFIX}:#{scope}:#{type}:#{id}:tags", (err, oldList) =>
+    return callback?(err) if err?
 
-    newList = tags
+    # keep record of old list
+    oldList = oldList || []
 
-    # get current tags
-    @redisClient.smembers "#{@prefix}:#{scope}:#{@taggable}:#{id}:tags", (err, oldList) =>
-      return callback?(err) if err?
+    # make array of tags that need to be removed
+    added = newList.filter((i) -> oldList.indexOf(i) is -1)
 
-      # keep record of old list
-      oldList = oldList || []
+    # make array of tags that need to be added
+    removed = oldList.filter((i) -> newList.indexOf(i) is -1)
 
-      # make array of tags that need to be removed
-      added = newList.filter((i) -> oldList.indexOf(i) is -1)
+    # set counters
+    toAddCount = added.length
+    toRemoveCount = removed.length
 
-      # make array of tags that need to be added
-      removed = oldList.filter((i) -> newList.indexOf(i) is -1)
+    # nothing has been changed
+    return callback?() if toAddCount is 0 and toRemoveCount is 0
 
-      # set counters
-      toAddCount = added.length
-      toRemoveCount = removed.length
-
-      # nothing has been changed
-      return callback?() if toAddCount is 0 and toRemoveCount is 0
-
-      # add new tags
-      added.forEach (tag) =>
-        @redisClient.multi()
-        .sadd("#{@prefix}:#{scope}:#{@taggable}:#{id}:tags", tag)
-        .sadd("#{@prefix}:#{scope}:#{@taggable}:tags:#{tag}", id)
-        .zincrby("#{@prefix}:#{scope}:#{@taggable}:tags", 1, tag)
-        .sadd("#{@prefix}:#{@taggable}:#{id}:tags", tag)
-        .sadd("#{@prefix}:#{@taggable}:tags:#{tag}", id)
-        .zincrby("#{@prefix}:#{@taggable}:tags", 1, tag)
-        .exec (err, replies) ->
-          return callback?(err) if err?
-          toAddCount--
-          return callback?() if toAddCount <= 0 and toRemoveCount <= 0
-        return
+    # add new tags
+    added.forEach (tag) =>
+      REDIS_CLIENT.multi()
+      .sadd("#{PREFIX}:#{scope}:#{type}:#{id}:tags", tag)
+      .sadd("#{PREFIX}:#{scope}:#{type}:tags:#{tag}", id)
+      .zincrby("#{PREFIX}:#{scope}:#{type}:tags", 1, tag)
+      .sadd("#{PREFIX}:#{type}:#{id}:tags", tag)
+      .sadd("#{PREFIX}:#{type}:tags:#{tag}", id)
+      .zincrby("#{PREFIX}:#{type}:tags", 1, tag)
+      .exec (err, replies) ->
+        return callback?(err) if err?
+        toAddCount--
+        return callback?() if toAddCount <= 0 and toRemoveCount <= 0
+      return
 
 
-      # remove the rest
-      removed.forEach (tag) =>
-        @redisClient.multi()
-        .srem("#{@prefix}:#{scope}:#{@taggable}:#{id}:tags", tag)
-        .srem("#{@prefix}:#{scope}:#{@taggable}:tags:#{tag}", id)
-        .zincrby("#{@prefix}:#{scope}:#{@taggable}:tags", -1, tag)
-        .srem("#{@prefix}:#{@taggable}:#{id}:tags", tag)
-        .srem("#{@prefix}:#{@taggable}:tags:#{tag}", id)
-        .zincrby("#{@prefix}:#{@taggable}:tags", -1, tag)
-        .exec (err, replies) =>
-          return callback?(err) if err?
+    # remove the rest
+    removed.forEach (tag) =>
+      REDIS_CLIENT.multi()
+      .srem("#{PREFIX}:#{scope}:#{type}:#{id}:tags", tag)
+      .srem("#{PREFIX}:#{scope}:#{type}:tags:#{tag}", id)
+      .zincrby("#{PREFIX}:#{scope}:#{type}:tags", -1, tag)
+      .srem("#{PREFIX}:#{type}:#{id}:tags", tag)
+      .srem("#{PREFIX}:#{type}:tags:#{tag}", id)
+      .zincrby("#{PREFIX}:#{type}:tags", -1, tag)
+      .exec (err, replies) =>
+        return callback?(err) if err?
 
-          @redisClient.zrem("#{@prefix}:#{scope}:#{@taggable}:tags", tag) if replies[2] is "0"
+        REDIS_CLIENT.zrem("#{PREFIX}:#{scope}:#{type}:tags", tag) if replies[2] is "0"
 
-          # remove tag from system if count is zero
-          @redisClient.zrem("#{@prefix}:#{@taggable}:tags", tag) if replies[5] is "0"
+        # remove tag from system if count is zero
+        REDIS_CLIENT.zrem("#{PREFIX}:#{type}:tags", tag) if replies[5] is "0"
 
-          toRemoveCount--
+        toRemoveCount--
 
-          callback?() if toAddCount <= 0 and toRemoveCount <= 0
-          return
-
+        callback?() if toAddCount <= 0 and toRemoveCount <= 0
         return
 
       return
 
     return
 
-  unscopedSet : (id, tags, callback) ->
-    debuglog "[unscopedSet] taggable:#{@taggable}, id:#{id}, tags:#{tags}"
+  return
 
-    newList = tags
+unscopedSet = (type, id, tags, callback) ->
+  debuglog "[unscopedSet] type:#{type}, id:#{id}, tags:#{tags}"
 
-    # get current tags
-    @redisClient.smembers "#{@prefix}:#{@taggable}:#{id}:tags", (err, oldList) =>
+  newList = tags
 
-      # keep record of old list
-      oldList = oldList || []
+  # get current tags
+  REDIS_CLIENT.smembers "#{PREFIX}:#{type}:#{id}:tags", (err, oldList) =>
 
-      # make array of tags that need to be added
-      removed = oldList.filter((i) -> newList.indexOf(i) is -1)
+    # keep record of old list
+    oldList = oldList || []
 
-      # make array of tags that need to be removed
-      added = newList.filter((i) -> oldList.indexOf(i) is -1)
+    # make array of tags that need to be added
+    removed = oldList.filter((i) -> newList.indexOf(i) is -1)
 
-      # set counters
-      toAddCount = added.length
-      toRemoveCount = removed.length
+    # make array of tags that need to be removed
+    added = newList.filter((i) -> oldList.indexOf(i) is -1)
 
-      # nothing has been changed
-      return callback?() if toAddCount is 0 and toRemoveCount is 0
+    # set counters
+    toAddCount = added.length
+    toRemoveCount = removed.length
 
-      # add new tags
-      added.forEach (tag) =>
-        @redisClient.multi()
-        .sadd("#{@prefix}:#{@taggable}:#{id}:tags", tag)
-        .sadd("#{@prefix}:#{@taggable}:tags:#{tag}", id)
-        .zincrby("#{@prefix}:#{@taggable}:tags", 1, tag)
-        .exec (err, replies) =>
-          return callback?(err) if err?
+    # nothing has been changed
+    return callback?() if toAddCount is 0 and toRemoveCount is 0
 
-          toAddCount--
-          callback?() if toAddCount is 0 and toRemoveCount is 0
-          return
-        return
+    # add new tags
+    added.forEach (tag) =>
+      REDIS_CLIENT.multi()
+      .sadd("#{PREFIX}:#{type}:#{id}:tags", tag)
+      .sadd("#{PREFIX}:#{type}:tags:#{tag}", id)
+      .zincrby("#{PREFIX}:#{type}:tags", 1, tag)
+      .exec (err, replies) =>
+        return callback?(err) if err?
 
-      # remove the rest
-      removed.forEach (tag) =>
-        @redisClient.multi()
-        .srem("#{@prefix}:#{@taggable}:#{id}:tags", tag)
-        .srem("#{@prefix}:#{@taggable}:tags:#{tag}", id)
-        .zincrby("#{@prefix}:#{@taggable}:tags", -1, tag)
-        .exec (err, replies) =>
-          # remove tag from system if count is zero
-          @redisClient.zrem("#{@prefix}:#{@taggable}:tags", tag) if replies[2] is "0"
-          toRemoveCount--
-          callback?() if toAddCount is 0 and toRemoveCount is 0
-          return
+        toAddCount--
+        callback?() if toAddCount is 0 and toRemoveCount is 0
         return
       return
-    return
 
-  set : (id, tags, scope, callback) ->
-
-    id = String(id || EMPTY_STRING)
-    assert id, "bad argument id:#{id})"
-
-    if 'function' is typeof scope
-      callback = scope
-      scope = null
-
-    tags = tags || EMPTY_ARRAY
-
-    debuglog "[set] taggable:#{@taggable}, id:#{id}, tags:#{tags}, scope:#{scope},"
-
-    if scope
-      @scopedSet scope, id, tags, callback
-    else
-      @unscopedSet id, tags, callback
-    return
-
-  get : (ids, scope, callback) ->
-
-    if 'function' is typeof scope
-      callback = scope
-      scope = ""
-    else
-      scope = if scope? then "#{scope}:" else EMPTY_STRING
-
-    debuglog "[get] taggable:#{@taggable}, ids:#{ids}, scope:#{scope}"
-
-    unless ids
-      return callback?(null, [])
-
-    unless Array.isArray(ids) and ids.length > 0
-      # single id
-      @redisClient.smembers "#{@prefix}:#{scope}#{@taggable}:#{ids}:tags", callback
-    else
-      proc = @redisClient.multi()
-      for id in ids
-        proc = proc.smembers "#{@prefix}:#{scope}#{@taggable}:#{id}:tags"
-      proc.exec callback
-    return
-
-  find : (tags, scope, callback) ->
-
-    if 'function' is typeof scope
-      callback = scope
-      scope = EMPTY_STRING
-    else
-      scope = if scope? then  "#{scope}:" else EMPTY_STRING
-
-    debuglog "[find] taggable:#{@taggable}, tags:#{tags}, scope:#{scope}"
-
-    return callback(null, []) unless (tags || EMPTY_STRING).toString()
-
-    sets = []  # leave tags untouched
-
-    if Array.isArray(tags)
-      for tag, i in tags
-        sets.push "#{@prefix}:#{scope}#{@taggable}:tags:#{tag}"
-    else
-      sets.push "#{@prefix}:#{scope}#{@taggable}:tags:#{tags}"
-
-    @redisClient.sinter sets, callback
-    return
-
-  popular : (count, scope, callback) ->
-
-    count = parseInt count, 10
-    assert count > 0, "bad argument count:#{count}"
-
-    if 'function' is typeof scope
-      callback = scope
-      scope = EMPTY_STRING
-    else
-      scope = if scope? then  "#{scope}:" else EMPTY_STRING
-
-    debuglog "[popular]  taggable:#{@taggable}, count:#{count}, scope:#{scope}"
-
-    key = "#{@prefix}:#{scope}#{@taggable}:tags"
-
-    @redisClient.zrevrange key, 0, count - 1, "WITHSCORES", (err, reply) ->
-      return callback?(err) if err?
-
-      results = []
-      for item, i in reply by 2
-        results.push([reply[i], parseInt(reply[i+1], 10)])
-
-      callback?(null, results)
+    # remove the rest
+    removed.forEach (tag) =>
+      REDIS_CLIENT.multi()
+      .srem("#{PREFIX}:#{type}:#{id}:tags", tag)
+      .srem("#{PREFIX}:#{type}:tags:#{tag}", id)
+      .zincrby("#{PREFIX}:#{type}:tags", -1, tag)
+      .exec (err, replies) =>
+        # remove tag from system if count is zero
+        REDIS_CLIENT.zrem("#{PREFIX}:#{type}:tags", tag) if replies[2] is "0"
+        toRemoveCount--
+        callback?() if toAddCount is 0 and toRemoveCount is 0
+        return
       return
+    return
+  return
 
-      return
 
+exports.init = (redisClient, prefix)->
+  REDIS_CLIENT = redisClient
+  PREFIX = prefix || PREFIX
+  return
+
+exports.set = (type, id, tags, scope, callback) ->
+
+  assert REDIS_CLIENT, "redis client not init"
+
+  type = String(type || EMPTY_STRING)
+  assert type, "bad argument type:#{type})"
+
+  id = String(id || EMPTY_STRING)
+  assert id, "bad argument id:#{id})"
+
+  if 'function' is typeof scope
+    callback = scope
+    scope = null
+
+  tags = tags || EMPTY_ARRAY
+
+  debuglog "[set] type:#{type}, id:#{id}, tags:#{tags}, scope:#{scope},"
+
+  if scope
+    scopedSet type, scope, id, tags, callback
+  else
+    unscopedSet type, id, tags, callback
+  return
+
+
+exports.get = (type, ids, scope, callback) ->
+
+  if 'function' is typeof scope
+    callback = scope
+    scope = ""
+  else
+    scope = if scope? then "#{scope}:" else EMPTY_STRING
+
+  debuglog "[get] type:#{type}, ids:#{ids}, scope:#{scope}"
+
+  unless ids
+    return callback?(null, [])
+
+  unless Array.isArray(ids) and ids.length > 0
+    # single id
+    REDIS_CLIENT.smembers "#{PREFIX}:#{scope}#{type}:#{ids}:tags", callback
+  else
+    proc = REDIS_CLIENT.multi()
+    for id in ids
+      proc = proc.smembers "#{PREFIX}:#{scope}#{type}:#{id}:tags"
+    proc.exec callback
+  return
+
+exports.find = (type, tags, scope, callback) ->
+
+  assert REDIS_CLIENT, "redis client not init"
+
+  if 'function' is typeof scope
+    callback = scope
+    scope = EMPTY_STRING
+  else
+    scope = if scope? then  "#{scope}:" else EMPTY_STRING
+
+  debuglog "[find] type:#{type}, tags:#{tags}, scope:#{scope}"
+
+  return callback(null, []) unless (tags || EMPTY_STRING).toString()
+
+  sets = []  # leave tags untouched
+
+  if Array.isArray(tags)
+    for tag, i in tags
+      sets.push "#{PREFIX}:#{scope}#{type}:tags:#{tag}"
+  else
+    sets.push "#{PREFIX}:#{scope}#{type}:tags:#{tags}"
+
+  REDIS_CLIENT.sinter sets, callback
+  return
+
+exports.popular = (type, count, scope, callback) ->
+
+  assert REDIS_CLIENT, "redis client not init"
+
+  count = parseInt count, 10
+  assert count > 0, "bad argument count:#{count}"
+
+  if 'function' is typeof scope
+    callback = scope
+    scope = EMPTY_STRING
+  else
+    scope = if scope? then  "#{scope}:" else EMPTY_STRING
+
+  debuglog "[popular] type:#{type}, count:#{count}, scope:#{scope}"
+
+  key = "#{PREFIX}:#{scope}#{type}:tags"
+
+  REDIS_CLIENT.zrevrange key, 0, count - 1, "WITHSCORES", (err, reply) ->
+    return callback?(err) if err?
+
+    results = []
+    for item, i in reply by 2
+      results.push([reply[i], parseInt(reply[i+1], 10)])
+
+    callback?(null, results)
     return
 
-module.exports = Taggable
+  return
+
 
 
 
