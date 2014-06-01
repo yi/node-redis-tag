@@ -146,7 +146,7 @@ unscopedSet = (type, id, tags, callback) ->
 
 
 exports.init = (redisClient, prefix)->
-  REDIS_CLIENT = redisClient
+  REDIS_CLIENT = redisClient || REDIS_CLIENT
   PREFIX = prefix || PREFIX
   return
 
