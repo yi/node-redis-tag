@@ -47,7 +47,7 @@ system. For example: book, post, person, etc.
     var taggable = require("taggable-via-redis")
     taggable.init()
 
-Now we have 4 methods on the `bookTagger` object that give us tagging abilities.
+Now we have 4 methods on the `taggable` object that give us tagging abilities.
 
 ### init options
 
@@ -67,14 +67,14 @@ user has their own set of tags. If a `scope` is used when tagging. you still
 have avaiable to you all the other methods in a non-scoped or scoped manner.
 
     // sets tags on book 12
-    bookTagger.set("books", 12, ["fiction", "fantasy"], function(response){
+    taggable.set("books", 12, ["fiction", "fantasy"], function(err, response){
       console.log(response) //=> true
     })
 
 #### OR (with scope)
 
     // sets tags on book 12 for user 42
-    bookTagger.set("books", 12, ["fiction", "fantasy"], "user:42", function(response){
+    taggable.set("books", 12, ["fiction", "fantasy"], "user:42", function(err, response){
       console.log(response) //=> true
     })
 
@@ -84,7 +84,7 @@ The `get` method simply takes an `id` and a callback with a list of tags as the
 response. This will always be in the form of an array.
 
     // gets tags for book 12
-    bookTagger.get("books", 12, function(tags){
+    taggable.get("books", 12, function(err, tags){
       console.log(tags) //=> ["fiction", "fantasy"]
     })
 
@@ -94,7 +94,7 @@ Please note that this is only effective if you have used a scope on the `set`
 method.
 
     // gets tags for book 12
-    bookTagger.get("books", 12, "user:42", function(tags){
+    taggable.get("books", 12, "user:42", function(err, tags){
       console.log(tags) //=> ["fiction", "fantasy"]
     })
 
@@ -105,7 +105,7 @@ have those tags in common. The callback function taken as the second argument
 will return with an array of ids.
 
     // finds resources that have been tagged "fiction"
-    bookTagger.find("books", ["fiction"], function(ids){
+    taggable.find("books", ["fiction"], function(err, ids){
       console.log(ids) //=> ["12", "27", "42", "18"]
     })
 
@@ -115,7 +115,7 @@ Please note that this is only effective if you have used a scope on the `set`
 method.
 
     // finds resources that have been tagged "fiction"
-    bookTagger.find("books", ["fiction"], "user:42", function(ids){
+    taggable.find("books", ["fiction"], "user:42", function(err, ids){
       console.log(ids) //=> ["12", "27", "42", "18"]
     })
 
@@ -126,7 +126,7 @@ most to least most popular. It accepts an `integer` as its first argument
 describing the number of tags you want returned. The `callback` is called with
 a `nested array` listing the tags in decending order.
 
-    bookTagger.popular("books", 25, function(tags){
+    taggable.popular("books", 25, function(err, tags){
       console.log(tags) //=> [ ["fiction", 892], ["non-fiction", 423], ["fantasy", 315], ... ]
     })
 
@@ -135,7 +135,7 @@ a `nested array` listing the tags in decending order.
 Please note that this is only effective if you have used a scope on the `set`
 method.
 
-    bookTagger.popular("books", 25, "user:42", function(tags){
+    taggable.popular("books", 25, "user:42", function(err, tags){
       console.log(tags) //=> [ ["fiction", 27], ["non-fiction", 23], ["fantasy", 15], ... ]
     })
 
